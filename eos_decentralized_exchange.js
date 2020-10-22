@@ -286,7 +286,10 @@ function (context) { // Init()
         var panel = '<div class="ui form modal" id="crypto_dex_dashboard">' +
           '<i class="close icon"></i>' +
           '<div class="content">' +
-            '<div class="three fields">' +
+            '<div class="five fields">' +
+              '<div class="field">' +
+                '<input type="text" id="base_amount" placeholder="Base Amount">' +
+              '</div>' +
               '<div class="field">' +
                 '<input type="text" id="base_cryptocurrency" placeholder="Base Cryptocurrency">' +
               '</div>' +
@@ -294,7 +297,10 @@ function (context) { // Init()
                 '<input type="text" id="term_cryptocurrency" placeholder="Term Cryptocurrency">' +
               '</div>' +
               '<div class="ui field">' +
-                '<input type="text" id="term_amount" placeholder="Amount">' +
+                '<input type="text" id="term_amount" placeholder="Term Amount">' +
+              '</div>' +
+              '<div class="ui field">' +
+                '<input type="text" id="order_expiration" placeholder="Order Expiration">' +
               '</div>' +
             '</div>' +
           '</div>' +
