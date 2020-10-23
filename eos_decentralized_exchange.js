@@ -183,7 +183,7 @@ function (context) { // Init()
             popupErrorMessage("The amount of the base cryptocurrency should be a number.")
     				return
           }
-          var baseAmount =  ? Math.floor(parseFloat($("#base_amount").val()))
+          var baseAmount = Math.floor(parseFloat($("#base_amount").val()))
           if (baseAmount <= 0) {
     				popupErrorMessage("The amount of the base cryptocurrency should be greater than zero.")
     				return
