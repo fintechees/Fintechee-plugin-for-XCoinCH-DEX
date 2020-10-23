@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.01)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.02)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -105,7 +105,7 @@ function (context) { // Init()
                   const scatter = ScatterJS.scatter
 
                   window.eosjs_jsonrpc = eosjs_jsonrpc
-                  var eos_rpc = new eosjs_jsonrpc.JsonRpc(jsonRpcUrl)
+                  window.eos_rpc = new eosjs_jsonrpc.JsonRpc(jsonRpcUrl)
 
                   window.eos_api = scatter.eos(network, eosjs_api.Api, {rpc: eos_rpc});
 
@@ -149,11 +149,34 @@ function (context) { // Init()
         script1.src = api
       }
 
+      // mock
       function getSmartContract (termCryptocurrency) {
         if (termCryptocurrency == "TOKA") {
           return "tokena"
         } else if (termCryptocurrency == "TOKB") {
           return "tokenb"
+        }
+
+        return null
+      }
+
+      // mock
+      function makeAmountAccurate (currency, amount) {
+        if (currency == "TOKA") {
+          return amount.toFixed(4)
+        } else if (currency == "TOKB") {
+          return amount.toFixed(4)
+        }
+
+        return amount + ""
+      }
+
+      // mock
+      function getMemo (smartContract, data) {
+        if (smartContract == "tokena") {
+          return data.memo
+        } else if (smartContract == "tokenb") {
+          return data.memo
         }
 
         return null
@@ -183,31 +206,37 @@ function (context) { // Init()
             popupErrorMessage("The amount of the base cryptocurrency should be a number.")
     				return
           }
-          var baseAmount = Math.floor(parseFloat($("#base_amount").val()))
-          if (baseAmount <= 0) {
+          var baseAmountTmp = parseFloat($("#base_amount").val())
+          if (baseAmountTmp <= 0) {
     				popupErrorMessage("The amount of the base cryptocurrency should be greater than zero.")
     				return
     			}
+          var baseAmount = makeAmountAccurate(baseCryptocurrency, baseAmountTmp)
           if (isNaN($("#term_amount").val())) {
             popupErrorMessage("The amount of the term cryptocurrency should be a number.")
     				return
           }
-          var termAmount = Math.floor(parseFloat($("#term_amount").val()))
-    			if (termAmount <= 0) {
+          var termAmountTmp = parseFloat($("#term_amount").val())
+    			if (termAmountTmp <= 0) {
     				popupErrorMessage("The amount of the term cryptocurrency should be greater than zero.")
     				return
     			}
+          var termAmount = makeAmountAccurate(termCryptocurrency, termAmountTmp)
           if (isNaN($("#order_expiration").val())) {
             popupErrorMessage("The expiration of the order should be an integer.")
     				return
           }
-          var orderExpiration = Math.floor(parseInt($("#order_expiration").val()))
-    			if (orderExpiration < 3600) {
-    				popupErrorMessage("The expiration of the order should be greater than or equal to 3600.")
+          var orderExpiration = Math.floor(parseInt($("#order_expiration").val())) * 3600000
+    			if (orderExpiration < 3600000) {
+    				popupErrorMessage("The expiration of the order should be greater than or equal to one hour.")
     				return
     			}
 
-          var memo = (new Date().getTime() + orderExpiration * 1000) + ":" + baseCryptocurrency + ":" + baseAmount
+          var memo = baseCryptocurrency + ":" + baseAmount + ":" + termCryptocurrency + ":" + termAmount + ":" + (new Date().getTime() + orderExpiration)
+          var feeTrxId = null
+          var feeBlockNum = null
+          var trxId = null
+          var blockNum = null
 
           const requiredFields = {accounts: [window.network]}
           window.scatter.getIdentity(requiredFields).then(() => {
@@ -233,9 +262,11 @@ function (context) { // Init()
       	        }, {
       	          blocksBehind: 3,
       	          expireSeconds: 30
-      	        })
+      	        });
 
-      	        popupMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
+                feeTrxId = result.transaction_id
+                feeBlockNum = result.processed.block_num
+      	        printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2));
 
                 (async () => {
           	      try {
@@ -250,7 +281,7 @@ function (context) { // Init()
           	              data: {
           	                  from: account.name,
           	                  to: exchange,
-          	                  quantity: termAmount + ".0000 " + termCryptocurrency,
+          	                  quantity: termAmount + " " + termCryptocurrency,
           	                  memo: "O:" + memo
           	              }
           	          }]
@@ -259,7 +290,11 @@ function (context) { // Init()
           	          expireSeconds: 30
           	        })
 
-          	        popupMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
+                    trxId = result.transaction_id
+                    blockNum = result.processed.block_num
+          	        printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
+
+                    notifyTransactions(feeTrxId, feeBlockNum, trxId, blockNum)
           	      } catch (e) {
           					popupErrorMessage("Caught exception: " + e)
 
@@ -300,7 +335,7 @@ function (context) { // Init()
                 '<input type="text" id="term_amount" placeholder="Term Amount">' +
               '</div>' +
               '<div class="ui field">' +
-                '<input type="text" id="order_expiration" placeholder="Order Expiration">' +
+                '<input type="text" id="order_expiration" placeholder="Order Expiration (Hour)">' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -326,7 +361,17 @@ function (context) { // Init()
       $("#eos_logout").on("click", function () {
         if (typeof window.scatter != "undefined" && window.scatter != null) {
           window.scatter.logout()
-          window.scatter = null
+          delete window.scatter
+          delete window.eosjs_jsonrpc
+          delete window.eos_rpc
+          delete window.eos_api
+          delete window.dexLibsLoaded
+          delete window.jsonRpcUrl
+          delete window.chainId
+          delete window.scatterCore
+          delete window.scatterEos
+          delete window.jsonrpc
+          delete window.api
         }
       })
 
