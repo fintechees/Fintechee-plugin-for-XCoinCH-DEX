@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.03)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.04)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -184,12 +184,30 @@ function (context) { // Init()
 
       var exchange = "exchange"
 
+      function storeTrx (trx) {
+        if (typeof localStorage.reservedZone == "undefined") {
+          localStorage.reservedZone = JSON.stringify({dexOrders: [trx]})
+        } else {
+          var reservedZone = JSON.parse(localStorage.reservedZone)
+          if (typeof reservedZone.dexOrders == "undefined") {
+            reservedZone.dexOrders = []
+          }
+          reservedZone.dexOrders.push(trx)
+          localStorage.reservedZone = JSON.stringify(reservedZone)
+        }
+      }
+
       function makeMarket () {
         if (window.dexLibsLoaded) {
+          var mailAddr = $("#mail_address").val()
           var baseCryptocurrency = $("#base_cryptocurrency").val()
           var termCryptocurrency = $("#term_cryptocurrency").val()
     			var smartContract = getSmartContract(termCryptocurrency)
 
+          if (mailAddr == "") {
+    				popupErrorMessage("The mail address should not be empty.")
+    				return
+    			}
           if (baseCryptocurrency == "") {
     				popupErrorMessage("The base cryptocurrency should not be empty.")
     				return
@@ -307,9 +325,22 @@ function (context) { // Init()
 
                     trxId = result.transaction_id
                     blockNum = result.processed.block_num
-          	        printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
 
-                    notifyTransactions(feeTrxId, feeBlockNum, trxId, blockNum)
+                    var trx = {
+                      platform: "eos",
+                      mailAddr: mailAddr,
+                      feeTrxId: feeTrxId,
+                      feeBlockNum: feeBlockNum,
+                      trxId: trxId,
+                      blockNum: blockNum,
+                      from: account.name,
+                      to: exchange,
+                      quantity: termAmount + " " + termCryptocurrency,
+                      memo: "O:" + memo
+                    }
+                    storeTrx(trx)
+                    notifyTransactions(mailAddr, feeTrxId, feeBlockNum, trxId, blockNum)
+          	        printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
           	      } catch (e) {
           					popupErrorMessage("Caught exception: " + e)
 
@@ -336,7 +367,12 @@ function (context) { // Init()
         var panel = '<div class="ui form modal" id="crypto_dex_dashboard">' +
           '<i class="close icon"></i>' +
           '<div class="content">' +
-            '<div class="five fields">' +
+            '<div class="one fields">' +
+              '<div class="field">' +
+                '<input type="text" id="mail_address" placeholder="Mail Address">' +
+              '</div>' +
+            '</div>' +
+            '<div class="six fields">' +
               '<div class="field">' +
                 '<input type="text" id="base_amount" placeholder="Base Amount">' +
               '</div>' +
