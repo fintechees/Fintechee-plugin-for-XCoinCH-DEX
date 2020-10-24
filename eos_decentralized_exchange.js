@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.02)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.03)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -161,6 +161,17 @@ function (context) { // Init()
       }
 
       // mock
+      function getPlatformCurrency (currency) {
+        if (currency == "TOKA") {
+          return "EOS"
+        } else if (currency == "TOKB") {
+          return "EOS"
+        }
+
+        return null
+      }
+
+      // mock
       function makeAmountAccurate (currency, amount) {
         if (currency == "TOKA") {
           return amount.toFixed(4)
@@ -171,17 +182,6 @@ function (context) { // Init()
         return amount + ""
       }
 
-      // mock
-      function getMemo (smartContract, data) {
-        if (smartContract == "tokena") {
-          return data.memo
-        } else if (smartContract == "tokenb") {
-          return data.memo
-        }
-
-        return null
-      }
-
       var exchange = "exchange"
 
       function makeMarket () {
@@ -190,11 +190,11 @@ function (context) { // Init()
           var termCryptocurrency = $("#term_cryptocurrency").val()
     			var smartContract = getSmartContract(termCryptocurrency)
 
-          if (baseCryptocurrency == null || baseCryptocurrency == "") {
+          if (baseCryptocurrency == "") {
     				popupErrorMessage("The base cryptocurrency should not be empty.")
     				return
     			}
-          if (termCryptocurrency == null || termCryptocurrency == "") {
+          if (termCryptocurrency == "") {
     				popupErrorMessage("The term cryptocurrency should not be empty.")
     				return
     			}
@@ -202,7 +202,7 @@ function (context) { // Init()
     				popupErrorMessage("The smart contract doesn't exist.")
     				return
     			}
-          if (isNaN($("#base_amount").val())) {
+          if ($("#base_amount").val() == "" || isNaN($("#base_amount").val())) {
             popupErrorMessage("The amount of the base cryptocurrency should be a number.")
     				return
           }
@@ -212,7 +212,7 @@ function (context) { // Init()
     				return
     			}
           var baseAmount = makeAmountAccurate(baseCryptocurrency, baseAmountTmp)
-          if (isNaN($("#term_amount").val())) {
+          if ($("#term_amount").val() == "" || isNaN($("#term_amount").val())) {
             popupErrorMessage("The amount of the term cryptocurrency should be a number.")
     				return
           }
@@ -222,7 +222,22 @@ function (context) { // Init()
     				return
     			}
           var termAmount = makeAmountAccurate(termCryptocurrency, termAmountTmp)
-          if (isNaN($("#order_expiration").val())) {
+          if ($("#fee_amount").val() == "" || isNaN($("#fee_amount").val())) {
+            popupErrorMessage("The fee should be a number.")
+    				return
+          }
+          var feeAmountTmp = parseFloat($("#fee_amount").val())
+    			if (feeAmountTmp <= 0) {
+    				popupErrorMessage("The fee should be greater than zero.")
+    				return
+    			}
+          var feeAmount = makeAmountAccurate(termCryptocurrency, feeAmountTmp)
+          var platformCurrency = getPlatformCurrency(termCryptocurrency)
+          if (platformCurrency == null) {
+            popupErrorMessage("The platform currency doesn't exist.")
+    				return
+          }
+          if ($("#order_expiration").val() == "" || isNaN($("#order_expiration").val())) {
             popupErrorMessage("The expiration of the order should be an integer.")
     				return
           }
@@ -255,7 +270,7 @@ function (context) { // Init()
       	              data: {
       	                  from: account.name,
       	                  to: exchange,
-      	                  quantity: "1.0000 EOS",
+      	                  quantity: feeAmount + " " + platformCurrency,
       	                  memo: "F:" + memo
       	              }
       	          }]
@@ -333,6 +348,9 @@ function (context) { // Init()
               '</div>' +
               '<div class="ui field">' +
                 '<input type="text" id="term_amount" placeholder="Term Amount">' +
+              '</div>' +
+              '<div class="ui field">' +
+                '<input type="text" id="fee_amount" placeholder="Fee (Term Cryptocurrency)">' +
               '</div>' +
               '<div class="ui field">' +
                 '<input type="text" id="order_expiration" placeholder="Order Expiration (Hour)">' +
