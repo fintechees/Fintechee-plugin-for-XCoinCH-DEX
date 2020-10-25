@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.04)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.05)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -184,15 +184,15 @@ function (context) { // Init()
 
       var exchange = "exchange"
 
-      function storeTrx (trx) {
+      function storeOrder (order) {
         if (typeof localStorage.reservedZone == "undefined") {
-          localStorage.reservedZone = JSON.stringify({dexOrders: [trx]})
+          localStorage.reservedZone = JSON.stringify({dexOrders: [order]})
         } else {
           var reservedZone = JSON.parse(localStorage.reservedZone)
           if (typeof reservedZone.dexOrders == "undefined") {
             reservedZone.dexOrders = []
           }
-          reservedZone.dexOrders.push(trx)
+          reservedZone.dexOrders.push(order)
           localStorage.reservedZone = JSON.stringify(reservedZone)
         }
       }
@@ -326,7 +326,7 @@ function (context) { // Init()
                     trxId = result.transaction_id
                     blockNum = result.processed.block_num
 
-                    var trx = {
+                    var order = {
                       platform: "eos",
                       mailAddr: mailAddr,
                       feeTrxId: feeTrxId,
@@ -338,7 +338,7 @@ function (context) { // Init()
                       quantity: termAmount + " " + termCryptocurrency,
                       memo: "O:" + memo
                     }
-                    storeTrx(trx)
+                    storeOrder(order)
                     notifyTransactions(mailAddr, feeTrxId, feeBlockNum, trxId, blockNum)
           	        printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
           	      } catch (e) {
