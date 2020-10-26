@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.05)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.06)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -172,6 +172,15 @@ function (context) { // Init()
       }
 
       // mock
+      function getFeeAmountRequired (platformCurrency) {
+        if (currency == "EOS") {
+          return 1
+        }
+
+        return null
+      }
+
+      // mock
       function makeAmountAccurate (currency, amount) {
         if (currency == "TOKA") {
           return amount.toFixed(4)
@@ -240,21 +249,22 @@ function (context) { // Init()
     				return
     			}
           var termAmount = makeAmountAccurate(termCryptocurrency, termAmountTmp)
-          if ($("#fee_amount").val() == "" || isNaN($("#fee_amount").val())) {
-            popupErrorMessage("The fee should be a number.")
-    				return
-          }
-          var feeAmountTmp = parseFloat($("#fee_amount").val())
-    			if (feeAmountTmp <= 0) {
-    				popupErrorMessage("The fee should be greater than zero.")
-    				return
-    			}
-          var feeAmount = makeAmountAccurate(termCryptocurrency, feeAmountTmp)
           var platformCurrency = getPlatformCurrency(termCryptocurrency)
           if (platformCurrency == null) {
             popupErrorMessage("The platform currency doesn't exist.")
     				return
           }
+          if ($("#fee_amount").val() == "" || isNaN($("#fee_amount").val())) {
+            popupErrorMessage("The fee should be a number.")
+    				return
+          }
+          var feeAmountTmp = parseFloat($("#fee_amount").val())
+          var feeAmountRequired = getFeeAmountRequired(platformCurrency)
+    			if (feeAmountTmp < feeAmountRequired) {
+    				popupErrorMessage("The fee shouldn't be less than " + feeAmountRequired + " " + platformCurrency + ".")
+    				return
+    			}
+          var feeAmount = makeAmountAccurate(platformCurrency, feeAmountTmp)
           if ($("#order_expiration").val() == "" || isNaN($("#order_expiration").val())) {
             popupErrorMessage("The expiration of the order should be an integer.")
     				return
