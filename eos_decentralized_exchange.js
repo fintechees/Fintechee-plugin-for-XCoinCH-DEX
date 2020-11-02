@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.08)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.09)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -445,13 +445,8 @@ function (context) { // Init()
       function cancelOrder (baseCryptocurrency, termCryptocurrency, expirationTmp, trxId, blockNum) {
         if (window.dexLibsLoaded) {
           var expiration = new Date(expirationTmp).getTime()
-          var mailAddr = $("#mail_address").val()
     			var smartContract = getSmartContract(termCryptocurrency)
 
-          if (mailAddr == "") {
-    				popupErrorMessage("The mail address should not be empty.")
-    				return
-    			}
           if (expiration <= new Date().getTime()) {
     				popupErrorMessage("The order has expired.")
     				return
@@ -498,6 +493,8 @@ function (context) { // Init()
                 feeTrxId = result.transaction_id
                 feeBlockNum = result.processed.block_num
       	        //printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
+
+                notifyTransactionForCancellation(feeTrxId, feeBlockNum)
       	      } catch (e) {
       					popupErrorMessage("Caught exception: " + e)
 
@@ -550,7 +547,7 @@ function (context) { // Init()
           '</div>' +
           '<div class="content">' +
             '<div class="description">' +
-              '<table id="crypto_dex_myorders" class="cell-border" cellspacing="0">' +
+              '<table id="crypto_dex_myorders" class="cell-border nowrap" cellspacing="0">' +
               '</table>' +
             '</div>' +
           '</div>' +
@@ -702,14 +699,14 @@ function (context) { // Init()
         }
       })
 
-      $("#show_my_orders tbody").on("click", "btn_cancel_order", function () {
+      $("#crypto_dex_myorders tbody").on("click", "button", function () {
 				if (table != null) {
 					var data = table.row($(this).parents("tr")).data()
 					if (typeof data == "undefined") {
 						data = table.row($(this)).data()
 					}
 
-          if (Number.isNumber(data[0])) {
+          if (data[0] != "") {
             cancelOrder(data[3], data[1], data[5], data[6], data[7])
           } else {
             cancelOrder(data[1], data[3], data[5], data[6], data[7])
