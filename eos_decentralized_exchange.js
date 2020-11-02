@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.07)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.08)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -202,6 +202,7 @@ function (context) { // Init()
         return null
       }
 
+      // mock
       function getFeeAmountRequiredForCancellation (platformCurrency) {
         if (platformCurrency == "EOS") {
           return 1
@@ -466,61 +467,45 @@ function (context) { // Init()
           }
           var feeAmount = makeAmountAccurate(platformCurrency, getFeeAmountRequiredForCancellation(platformCurrency))
 
-          var memo = baseCryptocurrency + ":" + termCryptocurrency + ":" + trxId + ":" + blockNum
+          var memo = baseCryptocurrency + ":" + termCryptocurrency + ":" + trxId + ":" + blockNum;
 
           const requiredFields = {accounts: [window.network]}
           window.scatter.getIdentity(requiredFields).then(() => {
             const account = window.scatter.identity.accounts.find(x => x.blockchain === "eos");
 
-            const trxRes = await window.eos_rpc.history_get_transaction(trxId, blockNum)
+            (async () => {
+      	      try {
+      	        const result = await window.eos_api.transact({
+      	          actions: [{
+      	              account: "eosio.token",
+      	              name: "transfer",
+      	              authorization: [{
+      	                  actor: account.name,
+      	                  permission: account.authority,
+      	              }],
+      	              data: {
+      	                  from: account.name,
+      	                  to: exchange,
+      	                  quantity: feeAmount + " " + platformCurrency,
+      	                  memo: "C:" + memo
+      	              }
+      	          }]
+      	        }, {
+      	          blocksBehind: 3,
+      	          expireSeconds: 30
+      	        })
 
-            if (typeof trxRes.trx != "undefined" && typeof trxRes.trx.receipt != "undefined" && typeof trxRes.trx.receipt.status == "string" && trxRes.trx.receipt.status == "executed") {
-              var smartContract = trxRes.trx.trx.actions[0].account
-              var data = trxRes.trx.trx.actions[0].data
-              var sender = trxRes.trx.trx.actions[0].authorization[0].actor
-              var amount = getAmount(__smartContract, __data)
-              var memo = getMemo(__smartContract, __data)
+                feeTrxId = result.transaction_id
+                feeBlockNum = result.processed.block_num
+      	        //printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2))
+      	      } catch (e) {
+      					popupErrorMessage("Caught exception: " + e)
 
-              if (smartContract != null && sender != null && amount != null && memo != null) {
-                var memoArr = memo.split(":")
-
-                if (memo.length == 6 && sender == account.name && memo[1] == baseCryptocurrency && memo[3] == termCryptocurrency && parseInt(memo[5]) == expiration) {
-                  (async () => {
-            	      try {
-            	        const result = await window.eos_api.transact({
-            	          actions: [{
-            	              account: "eosio.token",
-            	              name: "transfer",
-            	              authorization: [{
-            	                  actor: account.name,
-            	                  permission: account.authority,
-            	              }],
-            	              data: {
-            	                  from: account.name,
-            	                  to: exchange,
-            	                  quantity: feeAmount + " " + platformCurrency,
-            	                  memo: "C:" + memo
-            	              }
-            	          }]
-            	        }, {
-            	          blocksBehind: 3,
-            	          expireSeconds: 30
-            	        })
-
-                      feeTrxId = result.transaction_id
-                      feeBlockNum = result.processed.block_num;
-            	        //printMessage("Transaction pushed!\n\n" + JSON.stringify(result, null, 2));
-            	      } catch (e) {
-            					popupErrorMessage("Caught exception: " + e)
-
-            	        if (e instanceof window.eosjs_jsonrpc.RpcError) {
-            						popupErrorMessage(JSON.stringify(e.json, null, 2))
-            					}
-            	      }
-            	    })()
-                }
-              }
-            }
+      	        if (e instanceof window.eosjs_jsonrpc.RpcError) {
+      						popupErrorMessage(JSON.stringify(e.json, null, 2))
+      					}
+      	      }
+      	    })()
           }).catch(error => {
             popupErrorMessage(error)
           })
@@ -665,23 +650,21 @@ function (context) { // Init()
           return
         }
 
-        (async () => {
-          $("#crypto_dex_orderbook").DataTable().clear().draw()
+        $("#crypto_dex_orderbook").DataTable().clear().draw()
 
-          var orders = getOrders(baseCryptocurrency, termCryptocurrency)
+        var orders = getOrders(baseCryptocurrency, termCryptocurrency)
 
-          orders.sort(function (a, b) {return b.price - a.price})
+        orders.sort(function (a, b) {return b.price - a.price})
 
-          for (var i in orders) {
-            $("#crypto_dex_orderbook").DataTable().row.add([
-              orders[i].baseAmount != null ? orders[i].baseAmount : "",
-              orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
-              orders[i].price != null ? orders[i].price : "",
-              orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
-              orders[i].termAmount != null ? orders[i].termAmount : ""
-            ]).draw(false)
-          }
-        })()
+        for (var i in orders) {
+          $("#crypto_dex_orderbook").DataTable().row.add([
+            orders[i].baseAmount != null ? orders[i].baseAmount : "",
+            orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
+            orders[i].price != null ? orders[i].price : "",
+            orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
+            orders[i].termAmount != null ? orders[i].termAmount : ""
+          ]).draw(false)
+        }
       })
 
       $("#show_my_orders").on("click", function () {
@@ -701,24 +684,22 @@ function (context) { // Init()
           return
         }
 
-        (async () => {
-          $("#crypto_dex_myorders").DataTable().clear().draw()
+        $("#crypto_dex_myorders").DataTable().clear().draw()
 
-          var orders = getMyOrders(mailAddress, baseCryptocurrency, termCryptocurrency)
+        var orders = getMyOrders(mailAddress, baseCryptocurrency, termCryptocurrency)
 
-          for (var i in orders) {
-            $("#crypto_dex_myorders").DataTable().row.add([
-              orders[i].baseAmount != null ? orders[i].baseAmount : "",
-              orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
-              orders[i].price != null ? orders[i].price : "",
-              orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
-              orders[i].termAmount != null ? orders[i].termAmount : ""
-              orders[i].expiration != null ? new Date(orders[i].expiration) : ""
-              orders[i].trxId != null ? orders[i].trxId : ""
-              orders[i].blockNum != null ? orders[i].blockNum : ""
-            ]).draw(false)
-          }
-        })()
+        for (var i in orders) {
+          $("#crypto_dex_myorders").DataTable().row.add([
+            orders[i].baseAmount != null ? orders[i].baseAmount : "",
+            orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
+            orders[i].price != null ? orders[i].price : "",
+            orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
+            orders[i].termAmount != null ? orders[i].termAmount : "",
+            orders[i].expiration != null ? new Date(orders[i].expiration) : "",
+            orders[i].trxId != null ? orders[i].trxId : "",
+            orders[i].blockNum != null ? orders[i].blockNum : ""
+          ]).draw(false)
+        }
       })
 
       $("#show_my_orders tbody").on("click", "btn_cancel_order", function () {
