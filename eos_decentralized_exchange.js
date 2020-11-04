@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.09)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.10)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
@@ -167,6 +167,79 @@ function (context) { // Init()
         }
         script1.async = true
         script1.src = api
+      }
+
+      function getOrders (baseCryptocurrency, termCryptocurrency) {
+        return new Promise((res, rej) => {
+          $.ajax({
+            type: "POST",
+            url: "http://127.0.0.1:8080/orders/" + baseCryptocurrency + "/" + termCryptocurrency,
+            data: JSON.stringify({
+              mailAddr: ""
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                        if (Array.isArray(data)) {
+                          res(data)
+                        } else {
+                          rej()
+                        }
+                      }
+          })
+        })
+      }
+
+      function getMyOrders (mailAddress, baseCryptocurrency, termCryptocurrency) {
+        return new Promise((res, rej) => {
+          $.ajax({
+            type: "POST",
+            url: "http://127.0.0.1:8080/orders/" + baseCryptocurrency + "/" + termCryptocurrency,
+            data: JSON.stringify({
+              mailAddr: mailAddress
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                        if (Array.isArray(data)) {
+                          res(data)
+                        } else {
+                          rej()
+                        }
+                      }
+          })
+        })
+      }
+
+      function notifyTransactionForCancellation (cancellationFeeTrxId, cancellationFeeBlockNum) {
+        $.ajax({
+          type: "POST",
+          url: "http://127.0.0.1:8080/notification/cancellation",
+          data: JSON.stringify({
+            cancellationFeeTrxId: cancellationFeeTrxId,
+            cancellationFeeBlockNum: cancellationFeeBlockNum
+          }),
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          success: function (data) {}
+        })
+      }
+
+      function notifyTransaction (mailAddress, feeTrxId, feeBlockNum, trxId, blockNum) {
+        $.ajax({
+          type: "POST",
+          url: "http://127.0.0.1:8080/notification/transaction",
+          data: JSON.stringify({
+            mailAddr: mailAddress,
+            feeTrxId: feeTrxId,
+            feeBlockNum: feeBlockNum,
+            trxId: trxId,
+            blockNum: blockNum
+          }),
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          success: function (data) {}
+        })
       }
 
       // mock
@@ -462,7 +535,7 @@ function (context) { // Init()
           }
           var feeAmount = makeAmountAccurate(platformCurrency, getFeeAmountRequiredForCancellation(platformCurrency))
 
-          var memo = baseCryptocurrency + ":" + termCryptocurrency + ":" + trxId + ":" + blockNum;
+          var memo = baseCryptocurrency + ":" + termCryptocurrency + ":" + trxId + ":" + blockNum
 
           const requiredFields = {accounts: [window.network]}
           window.scatter.getIdentity(requiredFields).then(() => {
@@ -649,19 +722,21 @@ function (context) { // Init()
 
         $("#crypto_dex_orderbook").DataTable().clear().draw()
 
-        var orders = getOrders(baseCryptocurrency, termCryptocurrency)
+        getOrders(baseCryptocurrency, termCryptocurrency)
+        .then(function (orders) {
+          orders.sort(function (a, b) {return b.price - a.price})
 
-        orders.sort(function (a, b) {return b.price - a.price})
-
-        for (var i in orders) {
-          $("#crypto_dex_orderbook").DataTable().row.add([
-            orders[i].baseAmount != null ? orders[i].baseAmount : "",
-            orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
-            orders[i].price != null ? orders[i].price : "",
-            orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
-            orders[i].termAmount != null ? orders[i].termAmount : ""
-          ]).draw(false)
-        }
+          for (var i in orders) {
+            $("#crypto_dex_orderbook").DataTable().row.add([
+              orders[i].baseAmount != null ? orders[i].baseAmount : "",
+              orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
+              orders[i].price != null ? orders[i].price : "",
+              orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
+              orders[i].termAmount != null ? orders[i].termAmount : ""
+            ]).draw(false)
+          }
+        })
+        .catch(function () {})
       })
 
       $("#show_my_orders").on("click", function () {
@@ -683,20 +758,22 @@ function (context) { // Init()
 
         $("#crypto_dex_myorders").DataTable().clear().draw()
 
-        var orders = getMyOrders(mailAddress, baseCryptocurrency, termCryptocurrency)
-
-        for (var i in orders) {
-          $("#crypto_dex_myorders").DataTable().row.add([
-            orders[i].baseAmount != null ? orders[i].baseAmount : "",
-            orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
-            orders[i].price != null ? orders[i].price : "",
-            orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
-            orders[i].termAmount != null ? orders[i].termAmount : "",
-            orders[i].expiration != null ? new Date(orders[i].expiration) : "",
-            orders[i].trxId != null ? orders[i].trxId : "",
-            orders[i].blockNum != null ? orders[i].blockNum : ""
-          ]).draw(false)
-        }
+        getMyOrders(mailAddress, baseCryptocurrency, termCryptocurrency)
+        .then(function (orders) {
+          for (var i in orders) {
+            $("#crypto_dex_myorders").DataTable().row.add([
+              orders[i].baseAmount != null ? orders[i].baseAmount : "",
+              orders[i].baseCryptocurrency != null ? orders[i].baseCryptocurrency : "",
+              orders[i].price != null ? orders[i].price : "",
+              orders[i].termCryptocurrency != null ? orders[i].termCryptocurrency : "",
+              orders[i].termAmount != null ? orders[i].termAmount : "",
+              orders[i].expiration != null ? new Date(orders[i].expiration) : "",
+              orders[i].trxId != null ? orders[i].trxId : "",
+              orders[i].blockNum != null ? orders[i].blockNum : ""
+            ]).draw(false)
+          }
+        })
+        .catch(function () {})
       })
 
       $("#crypto_dex_myorders tbody").on("click", "button", function () {
