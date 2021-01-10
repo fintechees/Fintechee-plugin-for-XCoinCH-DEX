@@ -1,6 +1,6 @@
 registerEA(
 "cryptocurrency_decentralized_exchange",
-"A plugin to trade via a cryptocurrency decentralized exchange(v0.10)",
+"A plugin to trade via a cryptocurrency decentralized exchange(v0.10, deprecated)",
 [{
   name: "jsonRpcUrl",
   value: "http://127.0.0.1:8888", // "https://nodes.get-scatter.com",
