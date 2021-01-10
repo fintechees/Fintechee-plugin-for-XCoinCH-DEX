@@ -13,3 +13,6 @@ Please access https://www.xcoinch.com/dex.html to see the results and figure out
 Please choose TestNet(ETH x EOS) and input WEENUS into Base Cryptocurrency and input JUNGLE into Term Cryptocurrency to check the order book that the market maker bot created.
 
 The strategy is just to send orders based on random prices.
+
+
+MIT License
