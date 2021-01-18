@@ -17,4 +17,6 @@ The strategy is just to send orders based on random prices.
 
 MIT License
 
+![XCoinCH](https://www.xcoinch.com/images/tutorials/screenshot.png)
 ![XCoinCH](https://www.xcoinch.com/images/screenshot.png)
+![XCoinCH](https://www.xcoinch.com/images/screenshot2.png)
